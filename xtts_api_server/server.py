@@ -142,7 +142,7 @@ class SynthesisFileRequest(BaseModel):
     file_name_or_path: str  
 
 @app.get("/speakers_list")
-def get_speakers():
+def get_speakers_list():
     speakers = XTTS.get_speakers()
     return speakers
 

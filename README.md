@@ -48,6 +48,24 @@ pip install xtts-api-server
 pip install torch==2.1.1+cu118 torchaudio==2.1.1+cu118 --index-url https://download.pytorch.org/whl/cu118
 ```
 
+### Intel Arc GPU (XPU)
+For Intel Arc GPUs (like the B580), you need PyTorch with native XPU support (available since PyTorch 2.5):
+```bash
+# Windows or Linux
+python -m venv venv
+# Activate venv (Windows: venv\Scripts\activate, Linux: source venv/bin/activate)
+pip install xtts-api-server
+# Install PyTorch with native XPU support
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/xpu
+# Then run with --device xpu flag:
+python -m xtts_api_server --device xpu
+```
+
+**Note:** The `intel-extension-for-pytorch` package is no longer required as PyTorch now has native XPU support built-in. If you previously installed `intel-extension-for-pytorch`, you may want to uninstall it to avoid conflicts:
+```bash
+pip uninstall intel-extension-for-pytorch
+```
+
 ### Manual
 ```bash
 # Clone REPO
@@ -105,7 +123,7 @@ options:
   -h, --help show this help message and exit
   -hs HOST, --host HOST
   -p PORT, --port PORT
-  -d DEVICE, --device DEVICE `cpu` or `cuda`, you can specify which video card to use, for example, `cuda:0`
+  -d DEVICE, --device DEVICE `cpu`, `cuda`, or `xpu` (for Intel Arc GPUs), you can specify which device to use, for example, `cuda:0` or `xpu:0`
   -sf SPEAKER_FOLDER, --speaker-folder The folder where you get the samples for tts
   -o OUTPUT, --output Output folder
   -mf MODELS_FOLDERS, --model-folder Folder where models for XTTS will be stored, finetuned models should be stored in this folder

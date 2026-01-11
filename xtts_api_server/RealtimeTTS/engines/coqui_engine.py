@@ -267,16 +267,26 @@ class CoquiEngine(BaseEngine):
             logging.debug(f"Setting torch threads to {thread_count}")
             torch.set_num_threads(int(str(thread_count)))
 
-            # Check if CUDA or MPS is available, else use CPU
-            logging.debug (f"Checking for CUDA and MPS availability")
+            # Check if CUDA, XPU, or MPS is available, else use CPU
+            # Note: XPU support is built into PyTorch 2.5+ (no IPEX needed)
+            logging.debug (f"Checking for CUDA, XPU, and MPS availability")
             if torch.cuda.is_available():
                 logging.info("CUDA available, GPU inference used.")
                 device = torch.device("cuda")
+            elif hasattr(torch, 'xpu') and torch.xpu.is_available():
+                logging.info("XPU (Intel GPU) available, GPU inference used.")
+                device = torch.device("xpu")
             elif use_mps and torch.backends.mps.is_available() and torch.backends.mps.is_built():
                 logging.info("MPS available, GPU inference used.")
                 device = torch.device("mps")
             else:
-                logging.info("CUDA and MPS not available, CPU inference used.")
+                if hasattr(torch, 'xpu') and not torch.xpu.is_available():
+                    logging.warning("XPU module found but not available.")
+                    logging.warning(f"Current PyTorch version: {torch.__version__}")
+                    if '+cu' in torch.__version__:
+                        logging.warning("Your PyTorch has CUDA support. For XPU support, reinstall with:")
+                        logging.warning("  pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/xpu")
+                logging.info("CUDA, XPU, and MPS not available, CPU inference used.")
                 device = torch.device("cpu")
 
             logging.debug (f"Torch device set.")

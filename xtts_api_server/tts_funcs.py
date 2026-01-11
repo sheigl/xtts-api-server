@@ -66,7 +66,38 @@ class TTSWrapper:
     def __init__(self,output_folder = "./output", speaker_folder="./speakers",model_folder="./xtts_folder",lowvram = False,model_source = "local",model_version = "2.0.2",device = "cuda",deepspeed = False,enable_cache_results = True):
 
         self.cuda = device # If the user has chosen what to use, we rewrite the value to the value we want to use
-        self.device = 'cpu' if lowvram else (self.cuda if torch.cuda.is_available() else "cpu")
+
+        # Determine the appropriate device
+        if lowvram:
+            self.device = 'cpu'
+        elif device == "xpu":
+            # Check if XPU (Intel GPU) is available
+            # XPU support is built into PyTorch 2.5+ (no IPEX needed)
+            if not hasattr(torch, 'xpu'):
+                logger.error("XPU requested but torch.xpu module not found.")
+                logger.error("You need PyTorch with XPU support. Install it with:")
+                logger.error("  pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/xpu")
+                logger.warning("Falling back to CPU.")
+                self.device = "cpu"
+            elif not torch.xpu.is_available():
+                logger.warning("XPU requested but not available.")
+                logger.warning("Possible causes:")
+                logger.warning("  1. Intel GPU drivers not installed (see https://dgpu-docs.intel.com/driver/installation.html)")
+                logger.warning("  2. PyTorch was built with CUDA instead of XPU support")
+                logger.warning(f"  Current PyTorch version: {torch.__version__}")
+                if '+cu' in torch.__version__:
+                    logger.warning("  Your PyTorch has CUDA support. Reinstall with XPU support:")
+                    logger.warning("  pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/xpu")
+                logger.warning("Falling back to CPU.")
+                self.device = "cpu"
+            else:
+                self.device = "xpu"
+                logger.info("XPU (Intel GPU) is available and will be used.")
+        elif device == "cuda":
+            self.device = self.cuda if torch.cuda.is_available() else "cpu"
+        else:
+            self.device = device
+
         self.lowvram = lowvram  # Store whether we want to run in low VRAM mode.
 
         self.latents_cache = {} 
@@ -239,8 +270,14 @@ class TTSWrapper:
 
     # LOWVRAM FUNCS
     def switch_model_device(self):
-        # We check for lowram and the existence of cuda
-        if self.lowvram and torch.cuda.is_available() and self.cuda != "cpu":
+        # We check for lowram and the existence of cuda or xpu
+        device_available = False
+        if self.cuda == "cuda":
+            device_available = torch.cuda.is_available()
+        elif self.cuda == "xpu":
+            device_available = hasattr(torch, 'xpu') and torch.xpu.is_available()
+
+        if self.lowvram and device_available and self.cuda != "cpu":
             with torch.no_grad():
                 if self.device == self.cuda:
                     self.device = "cpu"
@@ -250,8 +287,11 @@ class TTSWrapper:
                 self.model.to(self.device)
 
             if self.device == 'cpu':
-                # Clearing the cache to free up VRAM
-                torch.cuda.empty_cache()
+                # Clearing the cache to free up VRAM/memory
+                if self.cuda == "cuda":
+                    torch.cuda.empty_cache()
+                elif self.cuda == "xpu":
+                    torch.xpu.empty_cache()
 
     # SPEAKER FUNCS
     def get_or_create_latents(self, speaker_name, speaker_wav):
