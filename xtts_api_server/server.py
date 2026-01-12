@@ -56,6 +56,9 @@ else:
     version_string = MODEL_VERSION
 
 # Load model
+logger.info(f"Model: '{version_string}' starts to load,wait until it loads")
+XTTS.load_model()
+
 if STREAM_MODE or STREAM_MODE_IMPROVE:
     # Load model for Streaming
     check_stream2sentence_version()
@@ -64,14 +67,11 @@ if STREAM_MODE or STREAM_MODE_IMPROVE:
 
     if STREAM_MODE_IMPROVE:
         logger.info("You launched an improved version of streaming, this version features an improved tokenizer and more context when processing sentences, which can be good for complex languages like Chinese")
-        
+
     model_path = XTTS.model_folder
-    
+
     engine = CoquiEngine(specific_model=MODEL_VERSION,use_deepspeed=DEEPSPEED,local_models_path=str(model_path))
-    stream = TextToAudioStream(engine)
-else:
-  logger.info(f"Model: '{version_string}' starts to load,wait until it loads")
-  XTTS.load_model() 
+    stream = TextToAudioStream(engine) 
 
 if USE_CACHE:
     logger.info("You have enabled caching, this option enables caching of results, your results will be saved and if there is a repeat request, you will get a file instead of generation")
