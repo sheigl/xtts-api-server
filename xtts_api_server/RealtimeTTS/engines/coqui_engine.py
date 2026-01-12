@@ -80,7 +80,11 @@ class CoquiEngine(BaseEngine):
         self.prepare_text_for_synthesis_callback = prepare_text_for_synthesis_callback
 
         # Start the worker process
-        set_start_method('spawn')
+        try:
+            set_start_method('spawn')
+        except RuntimeError:
+            # Context already set, which is fine
+            pass
         self.main_synthesize_ready_event = Event()
         self.parent_synthesize_pipe, child_synthesize_pipe = Pipe()
         self.voices_path = voices_path
@@ -259,6 +263,16 @@ class CoquiEngine(BaseEngine):
             chunk = chunk[None, : int(chunk.shape[0])]
             chunk = np.clip(chunk, -1, 1)
             chunk = chunk.astype(np.float32)
+
+            # Resample from 24000 Hz to 48000 Hz for better audio device compatibility
+            from scipy import signal
+            original_sample_rate = 24000
+            target_sample_rate = 48000
+            num_samples = int(chunk.shape[1] * target_sample_rate / original_sample_rate)
+            chunk = signal.resample(chunk, num_samples, axis=1)
+            chunk = np.clip(chunk, -1, 1)
+            chunk = chunk.astype(np.float32)
+
             return chunk
 
         logging.debug(f"Initializing coqui model {model_name} with cloning reference {cloning_reference_wav} and language {language}")
@@ -390,7 +404,8 @@ class CoquiEngine(BaseEngine):
                             conn.send(('success', chunk.tobytes()))                            
 
                     # Send silent audio
-                    sample_rate = config.audio.sample_rate  
+                    # Use the target sample rate (48000 Hz) for silence generation
+                    sample_rate = 48000
 
                     if text[-1] in [","]:
                         silence_duration = 0.2  # add 200ms speaking pause in case of comma
@@ -463,9 +478,9 @@ class CoquiEngine(BaseEngine):
             tuple: A tuple containing the audio format, number of channels, and the sample rate.
                   - Format (int): The format of the audio stream. pyaudio.paInt16 represents 16-bit integers.
                   - Channels (int): The number of audio channels. 1 represents mono audio.
-                  - Sample Rate (int): The sample rate of the audio in Hz. 16000 represents 16kHz sample rate.
-        """        
-        return pyaudio.paFloat32, 1, 24000
+                  - Sample Rate (int): The sample rate of the audio in Hz. 48000 represents 48kHz sample rate.
+        """
+        return pyaudio.paFloat32, 1, 48000
     
     def _prepare_text_for_synthesis(self, text: str):
         """
