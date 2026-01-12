@@ -20,7 +20,7 @@ from xtts_api_server.RealtimeTTS import TextToAudioStream, CoquiEngine
 from xtts_api_server.modeldownloader import check_stream2sentence_version,install_deepspeed_based_on_python_version
 
 # Default Folders , you can change them via API
-DEVICE = os.getenv('DEVICE',"cuda")
+DEVICE = os.getenv('DEVICE',"cpu")
 OUTPUT_FOLDER = os.getenv('OUTPUT', 'output')
 SPEAKER_FOLDER = os.getenv('SPEAKER', 'speakers')
 MODEL_FOLDER = os.getenv('MODEL', 'models')

@@ -21,31 +21,35 @@ You can keep track of all changes on the [release page](https://github.com/daswe
 
 ## Installation
 
-Simple installation :
+Simple installation (CPU-only):
 
 ```bash
 pip install xtts-api-server
 ```
 
-This will install all the necessary dependencies, including a **CPU support only** version of PyTorch
+This will install all the necessary dependencies, including a **CPU support only** version of PyTorch.
 
-I recommend that you install the **GPU version** to improve processing speed ( up to 3 times faster )
+The server runs on CPU by default. For GPU acceleration (recommended for 2-3x faster processing), see the platform-specific installation instructions below.
 
-### Windows
+### Windows (NVIDIA CUDA GPU)
 ```bash
 python -m venv venv
 venv\Scripts\activate
 pip install xtts-api-server
 pip install torch==2.1.1+cu118 torchaudio==2.1.1+cu118 --index-url https://download.pytorch.org/whl/cu118
+# Run with GPU acceleration:
+python -m xtts_api_server --device cuda
 ```
 
-### Linux
+### Linux (NVIDIA CUDA GPU)
 ```bash
 sudo apt install -y python3-dev python3-venv portaudio19-dev
 python -m venv venv
-source venv\bin\activate
+source venv/bin/activate
 pip install xtts-api-server
 pip install torch==2.1.1+cu118 torchaudio==2.1.1+cu118 --index-url https://download.pytorch.org/whl/cu118
+# Run with GPU acceleration:
+python -m xtts_api_server --device cuda
 ```
 
 ### Intel Arc GPU (XPU)
@@ -66,21 +70,37 @@ python -m xtts_api_server --device xpu
 pip uninstall intel-extension-for-pytorch
 ```
 
-### Manual
+### Manual Installation from Source
+
 ```bash
 # Clone REPO
 git clone https://github.com/daswer123/xtts-api-server
 cd xtts-api-server
+
 # Create virtual env
 python -m venv venv
-venv/scripts/activate or source venv/bin/activate
-# Install deps
+# Activate venv (Windows: venv\Scripts\activate, Linux: source venv/bin/activate)
+venv/scripts/activate
+
+# Install dependencies based on your hardware:
+
+# For CPU only:
 pip install -r requirements.txt
-pip install torch==2.1.1+cu118 torchaudio==2.1.1+cu118 --index-url https://download.pytorch.org/whl/cu118
+
+# For NVIDIA CUDA GPU:
+pip install -r requirements-cuda.txt
+
+# For Intel Arc GPU (XPU):
+pip install -r requirements-xpu.txt
+
 # Launch server
 python -m xtts_api_server
- 
 ```
+
+**Platform-specific requirements files:**
+- `requirements.txt` - CPU-only version with generic PyTorch
+- `requirements-cuda.txt` - NVIDIA CUDA GPU support (CUDA 12.1)
+- `requirements-xpu.txt` - Intel Arc GPU (XPU) support
 
 # Use Docker image with Docker Compose
 
@@ -110,7 +130,11 @@ docker compose up # or with -d to run in background
 
 ## Starting Server
 
-`python -m xtts_api_server` will run on default ip and port (localhost:8020)
+`python -m xtts_api_server` will run on default ip and port (localhost:8020) using CPU.
+
+For GPU acceleration, specify the device:
+- NVIDIA GPU: `python -m xtts_api_server --device cuda`
+- Intel Arc GPU: `python -m xtts_api_server --device xpu`
 
 Use the `--deepspeed` flag to process the result fast ( 2-3x acceleration )
 
@@ -123,7 +147,7 @@ options:
   -h, --help show this help message and exit
   -hs HOST, --host HOST
   -p PORT, --port PORT
-  -d DEVICE, --device DEVICE `cpu`, `cuda`, or `xpu` (for Intel Arc GPUs), you can specify which device to use, for example, `cuda:0` or `xpu:0`
+  -d DEVICE, --device DEVICE `cpu` (default), `cuda`, or `xpu` (for Intel Arc GPUs), you can specify which device to use, for example, `cuda:0` or `xpu:0`
   -sf SPEAKER_FOLDER, --speaker-folder The folder where you get the samples for tts
   -o OUTPUT, --output Output folder
   -mf MODELS_FOLDERS, --model-folder Folder where models for XTTS will be stored, finetuned models should be stored in this folder
